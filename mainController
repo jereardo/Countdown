@@ -1,0 +1,1046 @@
+/* This script handles the whole game. I tried cleaning it up a bit, organzing functions and variables, so I wouldn't be suprised
+if it comes back with some small errors, but the last build seems to work fine. This is written using the Unity API, so some of it might
+not make sense immediately, but its stupid easy to figure out. The reason I have a few functions that just run the actual coroutines is
+because sometimes Unity throws an argument exception at me, so that was the easiest way around it.
+
+http://www.mediafire.com/download/5bacev8orfokuh2/build2.rar */
+
+var screen : GameObject[];
+
+//player selection
+var players : int;
+var p1 : int;
+var p2 : int;
+var p3 : int;
+var p4 : int; //scores
+var playerSelectText : GameObject;
+var playerSelectObj: GameObject;
+var playerTurn : boolean[];
+
+var round : int;
+var pointsEarned : int;
+
+//in game
+var time : int;
+var time2 : int;
+var timer : GameObject;
+var vowelObj : GameObject;
+var consObj : GameObject;
+var vowel : String[];
+var cons : String[];
+var slot : String[];
+var slotText : GameObject[];
+var slotObj : GameObject[];
+var slotFilled : boolean[];
+var filled : boolean;
+var inputObj : GameObject;
+var inputWord : String;
+var clearButton : GameObject;
+var timerObj : GameObject;
+
+var checkBaseSprite : Sprite;
+var checkSuccessSprite : Sprite;
+var checkFailSprite : Sprite;
+
+//check pass
+var sWordObj : GameObject;
+var sBottomTextObj : GameObject;
+var nextRoundButton : GameObject;
+
+//check fail
+var fInputText : GameObject;
+var fNextRoundButton : GameObject;
+
+//game over
+var gameOverText : GameObject;
+var gameOverToTitle : GameObject;
+
+//highscores
+var HSPanelText : GameObject; //Highscore Set Panel
+var HSPanelObj : GameObject;
+var HSinputObj : GameObject;
+var HSNumber : int; 
+var HSList : GameObject;
+
+//url to check
+@TextAreaAttribute(3,5)
+public var url = "http://www.aporn.com";
+
+
+function Start () {
+
+	PlayerPrefs.SetInt("firstTime", 0);
+
+	if(PlayerPrefs.GetInt("firstTime",0)) {
+		PlayerPrefs.SetInt("highScore0", 75);
+		PlayerPrefs.SetInt("highScore1", 50);
+		PlayerPrefs.SetInt("highScore2", 30);
+		PlayerPrefs.SetInt("highScore3", 20);
+		PlayerPrefs.SetInt("highScore4", 10);
+		PlayerPrefs.SetInt("highScore5", 5);
+		PlayerPrefs.SetInt("highScore6", 4);
+		PlayerPrefs.SetInt("highScore7", 3);
+		PlayerPrefs.SetInt("highScore8", 2);
+		PlayerPrefs.SetInt("highScore9", 1);
+
+		PlayerPrefs.SetString("HSName0", "---");
+		PlayerPrefs.SetString("HSName1", "---");
+		PlayerPrefs.SetString("HSName2", "---");
+		PlayerPrefs.SetString("HSName3", "---");
+		PlayerPrefs.SetString("HSName4", "---");
+		PlayerPrefs.SetString("HSName5", "---");
+		PlayerPrefs.SetString("HSName6", "---");
+		PlayerPrefs.SetString("HSName7", "---");
+		PlayerPrefs.SetString("HSName8", "---");
+		PlayerPrefs.SetString("HSName9", "---");
+
+		PlayerPrefs.SetInt("firstTime", 1);
+	}
+}
+
+function Update () {
+
+	inputWord = inputObj.GetComponent.<UI.Text>().text;
+	for(var i : int = 0;i < slot.Length;i++) {
+		slotText[i].GetComponent.<UI.Text>().text = "" + slot[i];}
+
+	HSList.GetComponent.<UI.Text>().text = "" +
+	 PlayerPrefs.GetString("HSName0") + "		-		" + PlayerPrefs.GetInt("highScore0") + "\n" +
+	 PlayerPrefs.GetString("HSName1") + "		-		" + PlayerPrefs.GetInt("highScore1") + "\n" +
+	 PlayerPrefs.GetString("HSName2") + "		-		" + PlayerPrefs.GetInt("highScore2") + "\n" +
+	 PlayerPrefs.GetString("HSName3") + "		-		" + PlayerPrefs.GetInt("highScore3") + "\n" +
+	 PlayerPrefs.GetString("HSName4") + "		-		" + PlayerPrefs.GetInt("highScore4") + "\n" +
+	 PlayerPrefs.GetString("HSName5") + "		-		" + PlayerPrefs.GetInt("highScore5") + "\n" +
+	 PlayerPrefs.GetString("HSName6") + "		-		" + PlayerPrefs.GetInt("highScore6") + "\n" +
+	 PlayerPrefs.GetString("HSName7") + "		-		" + PlayerPrefs.GetInt("highScore7") + "\n" +
+	 PlayerPrefs.GetString("HSName8") + "		-		" + PlayerPrefs.GetInt("highScore8") + "\n" +
+	 PlayerPrefs.GetString("HSName9") + "		-		" + PlayerPrefs.GetInt("highScore9") + "\n";
+
+	url = "http://dictionary.reference.com/browse/" + inputWord + "?s=t";
+}
+
+function GameTimer () {
+
+	var thisTime : int = time;
+
+	round++;
+	StartCoroutine("FillEmpty");
+	for(var i : int = -1; i < thisTime;) {
+		timer.GetComponent.<UI.Text>().text = thisTime + "s";
+		thisTime--;
+		yield WaitForSeconds(1); }
+}
+
+function FillEmpty () {
+
+	var needed : boolean = false;
+
+	yield WaitForSeconds(time + 1);
+
+	for(var j : int = 0; j < slot.Length; j++) {
+		if(slot[j] == " ") {
+			var x : int = Random.Range(0,2);
+				if(x == 0) {
+					slot[j] = vowel[Random.Range(0, vowel.Length - 1)];
+					needed = true; }
+				else if(x == 1) {
+					slot[j] = cons[Random.Range(0, cons.Length - 1)];
+					needed = true; }
+			}
+	}
+
+	if(needed) {
+		timer.GetComponent.<UI.Text>().text = "Done!";
+		vowelObj.GetComponent.<UI.Button>().interactable = false;
+		consObj.GetComponent.<UI.Button>().interactable = false;
+		yield WaitForSeconds(1);
+		StartCoroutine("GameStart"); }
+}
+
+function GameStart () {
+	//via "FillEmpty" and "OnVowel/Cons"
+	var thisTime : int = time2;
+
+		timer.GetComponent.<UI.Text>().text = "Ready?";
+		yield WaitForSeconds(.5);
+		timer.GetComponent.<UI.Text>().text = "3";
+		yield WaitForSeconds(.5);
+		timer.GetComponent.<UI.Text>().text = "2";
+		yield WaitForSeconds(.5);
+		timer.GetComponent.<UI.Text>().text = "1";
+		yield WaitForSeconds(.5);
+		print("starting");
+
+		clearButton.GetComponent.<UI.Button>().interactable = true;
+		for(var i : int = 0; i < slot.Length; i++) {
+			slotObj[i].GetComponent.<UI.Button>().interactable = true; }
+		for(var z : int = 0; z <= thisTime;) {
+			timer.GetComponent.<UI.Text>().text = thisTime + "s";
+			yield WaitForSeconds(1);
+			thisTime--; }
+
+		StartCoroutine("InputCheck");
+}
+
+function StartInputCheck () {
+
+	StartCoroutine("InputCheck");
+}
+
+function InputCheck () {
+	/*
+		"http://dictionary.reference.com/browse/" + inputWord + "?s=t"; || no = "NO", yes = "YES"
+		"http://www.merriam-webster.com/dictionary/" + inputWord; || no = "0", yes = "Accept-Encoding"
+		"http://dictionary.cambridge.org/dictionary/english/" + inputWord; || no = "HTTP/1.1 404 Not Found", yes = "HTTP/1.1 200 OK"
+	
+	*/
+	var www : WWW = new WWW (url);
+
+	StopCoroutine("GameStart");
+	clearButton.GetComponent.<UI.Button>().interactable = false;
+
+    yield www;
+    if (www.responseHeaders.Count > 0) {
+        for (var entry in www.responseHeaders) {
+        	//print("" + entry.Value);
+        	if(entry.Value == "NO") {
+        		StartCoroutine("CheckFail");}
+        	else if(entry.Value == "YES") {
+				StartCoroutine("CheckPass"); }
+        }
+    }
+}
+
+function CheckPass () {
+
+	if(inputWord.Length == 1)
+		pointsEarned = 1;
+	if(inputWord.Length == 2)
+		pointsEarned = 2;
+	if(inputWord.Length == 3)
+		pointsEarned = 3;
+	if(inputWord.Length == 4)
+		pointsEarned = 4;
+	if(inputWord.Length == 5)
+		pointsEarned = 5;
+	if(inputWord.Length == 6)
+		pointsEarned = 7;
+	if(inputWord.Length == 7)
+		pointsEarned = 10;
+	if(inputWord.Length == 8)
+		pointsEarned = 15;
+	if(inputWord.Length == 9)
+		pointsEarned = 20;
+	if(inputWord.Length == 10)
+		pointsEarned = 30;
+
+	timer.GetComponent.<UI.Text>().text = "";
+	timerObj.GetComponent.<UI.Image>().sprite = checkSuccessSprite;
+	yield WaitForSeconds(1);
+	screen[2].SetActive(false);
+	sWordObj.GetComponent.<UI.Text>().text = inputWord;
+	sBottomTextObj.GetComponent.<UI.Text>().text = "scores you " + pointsEarned + " points!";
+	screen[3].SetActive(true);
+
+	if(round == 1)
+		nextRoundButton.GetComponent.<UI.Text>().text = "Ready for Round " + (round + 1) + "?";
+	if(round == 2)
+		nextRoundButton.GetComponent.<UI.Text>().text = "Ready for Round " + (round + 1) + "?";
+	if(round == 3)
+		nextRoundButton.GetComponent.<UI.Text>().text = "Great game! Let's see how ya did!";
+}
+
+function CheckPassNext () {
+
+	if(players == 1){
+		if(round == 3){
+			p1 = p1 + pointsEarned;
+			screen[3].SetActive(false);
+			screen[4].SetActive(true);
+		if(p1 < 15){
+			gameOverText.GetComponent.<UI.Text>().text = "You scored a total of " + p1 + " points this game! Ya need some work!";}
+		else { gameOverText.GetComponent.<UI.Text>().text = "You scored a total of " + p1 + " points this game! Nice job!"; }}
+
+		if(p1 >= PlayerPrefs.GetInt("highScore0")) {
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+			PlayerPrefs.SetInt("highScore2", PlayerPrefs.GetInt("highScore1"));
+			PlayerPrefs.SetInt("highScore1", PlayerPrefs.GetInt("highScore0"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+			PlayerPrefs.SetString("HSName2", PlayerPrefs.GetString("HSName1"));
+			PlayerPrefs.SetString("HSName1", PlayerPrefs.GetString("HSName0"));
+
+			PlayerPrefs.SetInt("highScore0", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 1st on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 1; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore1") && p1 < PlayerPrefs.GetInt("highScore0")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+			PlayerPrefs.SetInt("highScore2", PlayerPrefs.GetInt("highScore1"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+			PlayerPrefs.SetString("HSName2", PlayerPrefs.GetString("HSName1"));
+
+			PlayerPrefs.SetInt("highScore1", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 2nd on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 2; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore2") && p1 < PlayerPrefs.GetInt("highScore1")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+
+			PlayerPrefs.SetInt("highScore2", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 3rd on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 3;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore3") && p1 < PlayerPrefs.GetInt("highScore2")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+
+			PlayerPrefs.SetInt("highScore3", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 4th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 4;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore4") && p1 < PlayerPrefs.GetInt("highScore3")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+
+			PlayerPrefs.SetInt("highScore4", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 5th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 5; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore5") && p1 < PlayerPrefs.GetInt("highScore4")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+
+			PlayerPrefs.SetInt("highScore5", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 6th on the highscores!";
+			HSPanelObj.SetActive(true); 
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 6; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore6") && p1 < PlayerPrefs.GetInt("highScore5")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+
+			PlayerPrefs.SetInt("highScore6", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 7th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 7;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore7") && p1 < PlayerPrefs.GetInt("highScore6")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+
+			PlayerPrefs.SetInt("highScore7", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 8th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 8;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore8") && p1 < PlayerPrefs.GetInt("highScore7")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+
+			PlayerPrefs.SetInt("highScore8", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 9th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 9;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore9") && p1 < PlayerPrefs.GetInt("highScore8")){
+			PlayerPrefs.SetInt("highScore9", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 10th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 10;  }
+		}
+	}
+	else {
+		if(players == 1) {
+			p1 = p1 + pointsEarned;
+			screen[3].SetActive(false);
+
+			vowelObj.GetComponent.<UI.Button>().interactable = true;
+			consObj.GetComponent.<UI.Button>().interactable = true;
+
+			for(var i : int = 0; i < slot.Length; i++) {
+				slotObj[i].GetComponent.<UI.Button>().interactable = false;
+				slot[i] = ""; }
+			
+			clearButton.GetComponent.<UI.Button>().interactable = false;
+			timerObj.GetComponent.<UI.Image>().sprite = checkBaseSprite;
+			inputObj.GetComponent.<UI.Text>().text = "";
+
+			screen[2].SetActive(true);
+			}}	
+
+}
+
+function CheckFail () {
+
+	timer.GetComponent.<UI.Text>().text = "";
+	timerObj.GetComponent.<UI.Image>().sprite = checkFailSprite;
+
+	yield WaitForSeconds(1);
+
+	screen[2].SetActive(false);
+	screen[6].SetActive(true);
+
+	fInputText.GetComponent.<UI.Text>().text = inputWord;
+	if(round == 1)
+		fNextRoundButton.GetComponent.<UI.Text>().text = "Ready for Round " + (round + 1) + "?";
+	if(round == 2)
+		fNextRoundButton.GetComponent.<UI.Text>().text = "Ready for Round " + (round + 1) + "?";
+	if(round == 3)
+		fNextRoundButton.GetComponent.<UI.Text>().text = "Didn't end too strong, huh? Let's see how ya did.";
+}
+
+function CheckFailNext () {
+
+	if(round == 3){
+		screen[6].SetActive(false);
+		screen[4].SetActive(true);
+
+		if(players == 1) {
+			if(p1 < 15){
+				gameOverText.GetComponent.<UI.Text>().text = "You scored a total of " + p1 + " points this game! Ya need some work!";}
+			else { gameOverText.GetComponent.<UI.Text>().text = "You scored a total of " + p1 + " points this game! Nice job!"; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore0")) {
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+			PlayerPrefs.SetInt("highScore2", PlayerPrefs.GetInt("highScore1"));
+			PlayerPrefs.SetInt("highScore1", PlayerPrefs.GetInt("highScore0"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+			PlayerPrefs.SetString("HSName2", PlayerPrefs.GetString("HSName1"));
+			PlayerPrefs.SetString("HSName1", PlayerPrefs.GetString("HSName0"));
+
+			PlayerPrefs.SetInt("highScore0", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 1st on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 1; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore1") && p1 < PlayerPrefs.GetInt("highScore0")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+			PlayerPrefs.SetInt("highScore2", PlayerPrefs.GetInt("highScore1"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+			PlayerPrefs.SetString("HSName2", PlayerPrefs.GetString("HSName1"));
+
+			PlayerPrefs.SetInt("highScore1", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 2nd on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 2; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore2") && p1 < PlayerPrefs.GetInt("highScore1")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+			PlayerPrefs.SetInt("highScore3", PlayerPrefs.GetInt("highScore2"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+			PlayerPrefs.SetString("HSName3", PlayerPrefs.GetString("HSName2"));
+
+			PlayerPrefs.SetInt("highScore2", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 3rd on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 3;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore3") && p1 < PlayerPrefs.GetInt("highScore2")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+			PlayerPrefs.SetInt("highScore4", PlayerPrefs.GetInt("highScore3"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+			PlayerPrefs.SetString("HSName4", PlayerPrefs.GetString("HSName3"));
+
+			PlayerPrefs.SetInt("highScore3", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 4th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 4;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore4") && p1 < PlayerPrefs.GetInt("highScore3")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+			PlayerPrefs.SetInt("highScore5", PlayerPrefs.GetInt("highScore4"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+			PlayerPrefs.SetString("HSName5", PlayerPrefs.GetString("HSName4"));
+
+			PlayerPrefs.SetInt("highScore4", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 5th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 5; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore5") && p1 < PlayerPrefs.GetInt("highScore4")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+			PlayerPrefs.SetInt("highScore6", PlayerPrefs.GetInt("highScore5"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+			PlayerPrefs.SetString("HSName6", PlayerPrefs.GetString("HSName5"));
+
+			PlayerPrefs.SetInt("highScore5", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 6th on the highscores!";
+			HSPanelObj.SetActive(true); 
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 6; }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore6") && p1 < PlayerPrefs.GetInt("highScore5")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+			PlayerPrefs.SetInt("highScore7", PlayerPrefs.GetInt("highScore6"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+			PlayerPrefs.SetString("HSName7", PlayerPrefs.GetString("HSName6"));
+
+			PlayerPrefs.SetInt("highScore6", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 7th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 7;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore7") && p1 < PlayerPrefs.GetInt("highScore6")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+			PlayerPrefs.SetInt("highScore8", PlayerPrefs.GetInt("highScore7"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+			PlayerPrefs.SetString("HSName8", PlayerPrefs.GetString("HSName7"));
+
+			PlayerPrefs.SetInt("highScore7", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 8th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 8;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore8") && p1 < PlayerPrefs.GetInt("highScore7")){
+			PlayerPrefs.SetInt("highScore9", PlayerPrefs.GetInt("highScore8"));
+
+			PlayerPrefs.SetString("HSName9", PlayerPrefs.GetString("HSName8"));
+
+			PlayerPrefs.SetInt("highScore8", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 9th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 9;  }
+
+		if(p1 >= PlayerPrefs.GetInt("highScore9") && p1 < PlayerPrefs.GetInt("highScore8")){
+			PlayerPrefs.SetInt("highScore9", p1);
+			HSPanelText.GetComponent.<UI.Text>().text = "Congratulations! You placed 10th on the highscores!";
+			HSPanelObj.SetActive(true);
+			gameOverToTitle.GetComponent.<UI.Button>().interactable = false;
+			HSNumber = 10;  }
+			}
+		}
+	else {
+		screen[6].SetActive(false);
+
+		vowelObj.GetComponent.<UI.Button>().interactable = true;
+		consObj.GetComponent.<UI.Button>().interactable = true;
+		for(var i : int = 0; i < slot.Length; i++) {
+			slotObj[i].GetComponent.<UI.Button>().interactable = false;
+			slot[i] = ""; }
+		clearButton.GetComponent.<UI.Button>().interactable = false;
+		timerObj.GetComponent.<UI.Image>().sprite = checkBaseSprite;
+		inputObj.GetComponent.<UI.Text>().text = "";
+
+		screen[2].SetActive(true);
+		}
+}
+
+// Button functions
+
+function OnPlay () {
+
+	vowelObj.GetComponent.<UI.Button>().interactable = true;
+	consObj.GetComponent.<UI.Button>().interactable = true;
+
+	for(var j : int = 0; j < slot.Length; j++) {
+		slotObj[j].GetComponent.<UI.Button>().interactable = false;
+		slot[j] = ""; }
+	
+
+	clearButton.GetComponent.<UI.Button>().interactable = false;
+	timerObj.GetComponent.<UI.Image>().sprite = checkBaseSprite;
+	inputObj.GetComponent.<UI.Text>().text = "";
+
+	for(var i : int = 0; i < screen.Length; i++){
+		screen[i].SetActive(false);}
+	screen[1].SetActive(true);
+
+
+}
+
+function On1P () {
+
+	players = 1;
+	playerTurn[0] = true;
+	playerSelectText.GetComponent.<UI.Text>().text = "Playing with yourself?";
+	playerSelectObj.GetComponent.<UI.Button>().interactable = true;
+}
+
+function On2P () {
+
+	players = 2;
+	playerTurn[0] = true;
+	playerSelectText.GetComponent.<UI.Text>().text = "Just the two of you?";
+	playerSelectObj.GetComponent.<UI.Button>().interactable = true;
+}
+
+function On3P () {
+
+	players = 3;
+	playerTurn[0] = true;
+	playerSelectText.GetComponent.<UI.Text>().text = "Ahh, got a good threesome!";
+	playerSelectObj.GetComponent.<UI.Button>().interactable = true;
+}
+
+function On4P () {
+
+	players = 4;
+	playerTurn[0] = true;
+	playerSelectText.GetComponent.<UI.Text>().text = "Four Players";
+	playerSelectObj.GetComponent.<UI.Button>().interactable = true;
+}
+
+function StartOnVowel () {
+	StartCoroutine("OnVowel");
+}
+
+function StartOnCons () {
+	StartCoroutine("OnCons");
+}
+
+function OnVowel () {
+	
+	 if(slotFilled[0]) {
+	 	StartCoroutine("GameTimer");
+	 	slotFilled[0] = false;
+	 	slotFilled[1] = true;
+		slot[0] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[1]) {
+		slotFilled[1] = false;
+		slotFilled[2] = true;
+		slot[1] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[2]) {
+		slotFilled[2] = false;
+		slotFilled[3] = true;
+		slot[2] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[3]) {
+		slotFilled[3] = false;
+		slotFilled[4] = true;
+		slot[3] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[4]) {
+		slotFilled[4] = false;
+		slotFilled[5] = true;
+		slot[4] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[5]) {
+		slotFilled[5] = false;
+		slotFilled[6] = true;
+		slot[5] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[6]) {
+		slotFilled[6] = false;
+		slotFilled[7] = true;
+		slot[6] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[7]) {
+		slotFilled[7] = false;
+		slotFilled[8] = true;
+		slot[7] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[8]) {
+		slotFilled[8] = false;
+		slotFilled[9] = true;
+		slot[8] = vowel[Random.Range(0, vowel.Length - 1)];}
+	else if(slotFilled[9]) {
+		filled = true;
+		slotFilled[9] = false;
+		slotFilled[0] = true;
+		slot[9] = vowel[Random.Range(0, vowel.Length - 1)];
+		vowelObj.GetComponent.<UI.Button>().interactable = false;
+		consObj.GetComponent.<UI.Button>().interactable = false;
+		StopCoroutine("GameTimer");
+		timer.GetComponent.<UI.Text>().text = "Done!";
+		yield WaitForSeconds(1);
+		StartCoroutine("GameStart");
+	}
+}
+
+function OnCons () {
+
+	 if(slotFilled[0]) {
+	 	StartCoroutine("GameTimer");
+	 	slotFilled[0] = false;
+	 	slotFilled[1] = true;
+		slot[0] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[1]) {
+		slotFilled[1] = false;
+		slotFilled[2] = true;
+		slot[1] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[2]) {
+		slotFilled[2] = false;
+		slotFilled[3] = true;
+		slot[2] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[3]) {
+		slotFilled[3] = false;
+		slotFilled[4] = true;
+		slot[3] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[4]) {
+		slotFilled[4] = false;
+		slotFilled[5] = true;
+		slot[4] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[5]) {
+		slotFilled[5] = false;
+		slotFilled[6] = true;
+		slot[5] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[6]) {
+		slotFilled[6] = false;
+		slotFilled[7] = true;
+		slot[6] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[7]) {
+		slotFilled[7] = false;
+		slotFilled[8] = true;
+		slot[7] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[8]) {
+		slotFilled[8] = false;
+		slotFilled[9] = true;
+		slot[8] = cons[Random.Range(0, cons.Length - 1)];}
+	else if(slotFilled[9]) {
+		filled = true;
+		slotFilled[9] = false;
+		slotFilled[0] = true;
+		slot[9] = cons[Random.Range(0, cons.Length - 1)];
+		vowelObj.GetComponent.<UI.Button>().interactable = false;
+		consObj.GetComponent.<UI.Button>().interactable = false;
+		StopCoroutine("GameTimer");
+		timer.GetComponent.<UI.Text>().text = "Done!";
+		yield WaitForSeconds(1);
+		StartCoroutine("GameStart");
+	}
+}
+function OnToGamePlay () {
+
+	screen[1].SetActive(false);
+	screen[2].SetActive(true);
+}
+
+function OnSlot0 () {
+
+	slotObj[0].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[0];
+}
+
+function OnSlot1 () {
+
+	slotObj[1].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[1];
+}
+
+function OnSlot2 () {
+
+	slotObj[2].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[2];
+}
+
+function OnSlot3 () {
+
+	slotObj[3].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[3];
+}
+
+function OnSlot4 () {
+
+	slotObj[4].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[4];
+}
+
+function OnSlot5 () {
+
+	slotObj[5].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[5];
+}
+
+function OnSlot6 () {
+
+	slotObj[6].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[6];
+}
+
+function OnSlot7 () {
+
+	slotObj[7].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[7];
+}
+
+function OnSlot8 () {
+
+	slotObj[8].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[8];
+}
+
+function OnSlot9 () {
+
+	slotObj[9].GetComponent.<UI.Button>().interactable = false;
+	inputObj.GetComponent.<UI.Text>().text = inputObj.GetComponent.<UI.Text>().text + slot[9];
+}
+
+function OnClearInput () {
+
+	inputObj.GetComponent.<UI.Text>().text = "";
+	for(var i : int = 0; i < slotObj.Length; i++)
+		slotObj[i].GetComponent.<UI.Button>().interactable = true;
+}
+
+function OnAppClose () {
+
+	Application.Quit();
+}
+
+//Highscore functions
+function SaveName () {
+
+	if(HSNumber == 1) {
+		PlayerPrefs.SetString("HSName0", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName0"));
+	}
+	if(HSNumber == 2) {
+		PlayerPrefs.SetString("HSName1", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName1"));
+	}
+	if(HSNumber == 3) {
+		PlayerPrefs.SetString("HSName2", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName2"));
+	}
+	if(HSNumber == 4) {
+		PlayerPrefs.SetString("HSName3", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName3"));
+	}
+	if(HSNumber == 5) {
+		PlayerPrefs.SetString("HSName4", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName4"));
+	}
+	if(HSNumber == 6) {
+		PlayerPrefs.SetString("HSName5", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName5"));
+	}
+	if(HSNumber == 7) {
+		PlayerPrefs.SetString("HSName6", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName6"));
+	}
+	if(HSNumber == 8) {
+		PlayerPrefs.SetString("HSName7", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName7"));
+	}
+	if(HSNumber == 9) {
+		PlayerPrefs.SetString("HSName8", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName8"));
+	}
+	if(HSNumber == 10) {
+		PlayerPrefs.SetString("HSName9", HSinputObj.GetComponent.<UI.InputField>().text);
+		print("" + PlayerPrefs.GetString("HSName9"));
+	}
+
+	HSNumber = 0;
+	HSPanelObj.SetActive(false);
+	gameOverToTitle.GetComponent.<UI.Button>().interactable = true;
+
+}
+
+function OnResetHighScores () {
+
+		PlayerPrefs.SetInt("highScore0", 75);
+		PlayerPrefs.SetInt("highScore1", 50);
+		PlayerPrefs.SetInt("highScore2", 30);
+		PlayerPrefs.SetInt("highScore3", 20);
+		PlayerPrefs.SetInt("highScore4", 10);
+		PlayerPrefs.SetInt("highScore5", 5);
+		PlayerPrefs.SetInt("highScore6", 4);
+		PlayerPrefs.SetInt("highScore7", 3);
+		PlayerPrefs.SetInt("highScore8", 2);
+		PlayerPrefs.SetInt("highScore9", 1);
+
+		PlayerPrefs.SetString("HSName0", "---");
+		PlayerPrefs.SetString("HSName1", "---");
+		PlayerPrefs.SetString("HSName2", "---");
+		PlayerPrefs.SetString("HSName3", "---");
+		PlayerPrefs.SetString("HSName4", "---");
+		PlayerPrefs.SetString("HSName5", "---");
+		PlayerPrefs.SetString("HSName6", "---");
+		PlayerPrefs.SetString("HSName7", "---");
+		PlayerPrefs.SetString("HSName8", "---");
+		PlayerPrefs.SetString("HSName9", "---");
+
+	}
+
+//Screen swap functions
+function ToTitle () {
+
+	for(var i : int = 0; i < screen.Length; i++) {
+		screen[i].SetActive(false); }
+	screen[0].SetActive(true);
+	players = 0;
+	p1 = 0;
+	p2 = 0;
+	p3 = 0;
+	p4 = 0;
+	playerTurn[0] = false;
+	playerTurn[1] = false;
+	playerTurn[2] = false;
+	playerTurn[3] = false;
+	pointsEarned = 0;
+	round = 0;
+	inputWord = "";
+	HSNumber = 0;
+}
+
+function ToPSelect () {
+
+	for(var i : int = 0; i < screen.Length; i++) {
+		screen[i].SetActive(false); }
+	screen[1].SetActive(true);
+
+	StopCoroutine("GameTimer");
+	StopCoroutine("GameStart");
+}
+
+function ToHighScores () {
+
+	screen[0].SetActive(false);
+	screen[5].SetActive(true);
+}
